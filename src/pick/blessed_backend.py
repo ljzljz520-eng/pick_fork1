@@ -1,6 +1,6 @@
 import contextlib
 import curses
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from .backend import Backend
 
@@ -39,8 +39,9 @@ class BlessedBackend(Backend):
     def addnstr(self, y: int, x: int, s: str, n: int) -> None:
         print(self._term.move_yx(y, x) + s[:n], end='', flush=True)
 
-    def getch(self) -> int:
-        key = self._term.inkey()
+    def _code_for_key(self, key: Any) -> int:
+        if not key:
+            return -1
         if key.is_sequence:
             mapping = {
                 'KEY_UP': curses.KEY_UP,
@@ -48,8 +49,15 @@ class BlessedBackend(Backend):
                 'KEY_RIGHT': curses.KEY_RIGHT,
                 'KEY_ENTER': curses.KEY_ENTER,
             }
-            return mapping.get(key.name, -1)
-        return ord(key) if key else -1
+            return int(mapping.get(key.name, -1))
+        return ord(key)
+
+    def getch(self) -> int:
+        return self._code_for_key(self._term.inkey())
+
+    def getch_timeout(self, timeout: float) -> int:
+        """Wait at most ``timeout`` seconds for a key; return -1 on timeout."""
+        return self._code_for_key(self._term.inkey(timeout=timeout))
 
     def refresh(self) -> None:
         pass  # blessed prints directly, no refresh needed

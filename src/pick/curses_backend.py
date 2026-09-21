@@ -36,6 +36,19 @@ class CursesBackend(Backend):
         assert self._screen is not None
         return self._screen.getch()
 
+    def getch_timeout(self, timeout: float) -> int:
+        """Wait at most ``timeout`` seconds for a key; return -1 on timeout.
+
+        Uses the per-window timeout so an embedded curses application's
+        blocking behavior is restored afterwards.
+        """
+        assert self._screen is not None
+        self._screen.timeout(int(timeout * 1000))
+        try:
+            return self._screen.getch()
+        finally:
+            self._screen.timeout(-1)
+
     def refresh(self) -> None:
         assert self._screen is not None
         self._screen.refresh()

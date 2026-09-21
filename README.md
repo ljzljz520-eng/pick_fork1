@@ -74,6 +74,30 @@ Then pass `backend="blessed"` to `pick(...)`.
 - `backend`: (optional), the rendering backend to use. Accepts `"curses"` (default),
   `"blessed"` (requires `pip install pick[blessed]`), or a custom `Backend` instance.
 
+## Changing options while the picker is open
+
+Options are copied into an immutable snapshot when the `Picker` is created, so
+mutating the original list never affects the open menu. Options are reconciled
+by stable identity:
+
+- pass `key=...` to `Option` to set an explicit stable identity (must be
+  hashable and unique; duplicate keys raise `ValueError`);
+- plain values and `Option.value` (or the label when no value is given) are the
+  default identity. Unhashable values like dicts fall back to their position.
+
+Two methods on a running `Picker` accept updates from any thread — the change
+is queued and applied on the input loop, waking a loop blocked on keypress:
+
+- `picker.replace_options(options)`: replace the whole candidate set (items may
+  be inserted, deleted or reordered). Focus and selections follow surviving
+  identities; an empty list is legal while running (focus becomes `(None, -1)`,
+  multiselect becomes `[]`) and the menu recovers when options return;
+- `picker.update_options(options)`: refresh matched options in place (e.g.
+  enabled state / descriptions), append unknown keys, and never delete
+  missing ones.
+
+Returned values and indexes always refer to the current snapshot.
+
 ## Community Projects
 
 [pickpack](https://github.com/gc-av/pickpack): A fork of `pick` to select tree data.
